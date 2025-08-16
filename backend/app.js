@@ -3,6 +3,8 @@ import cookieParser from "cookie-parser";
 import { config } from "dotenv";
 import cors from "cors";
 import fileUpload from "express-fileupload";
+import { dbConnection } from "./database/db.js";
+import userRouter from "./routes/user.routes.js";
 
 const app = express();
 
@@ -25,6 +27,10 @@ app.use(
         useTempFiles: true,
         tempFileDir: "./temp/",
     })
-)
+);
+
+app.use("/api/v1/user", userRouter);
+
+dbConnection();
 
 export default app;
