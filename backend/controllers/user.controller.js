@@ -114,50 +114,58 @@ export const getUser = catchAsyncError(async(req, res, next) => {
 });
 
 export const updateProfile = catchAsyncError(async(req, res, next) => {
-    const {fullName, email} = req.body;
-    if(fullName.trim().length === 0 || email.trim().length === 0 ){
+    const { fullName, email } = req.body;
+    if (fullName.trim().length === 0 || email.trim().length === 0) {
         return res.status(400).json({
             success: false,
-            messsage: "Full name and email can't be empty."
+            message: "Full name and email can't be empty."
         });
     }
 
     const avtar = req?.files?.avtar;
     let cloudinaryResponse = {};
-    if(avtar){
+
+    if (avtar) {
         try {
             const oldAvtarPublicId = req.user?.avtar?.public_id;
-            if(oldAvtarPublicId && oldAvtarPublicId.length > 0){
-               await cloudinary.uploader.destroy(oldAvtarPublicId);
+            if (oldAvtarPublicId && oldAvtarPublicId.length > 0) {
+                await cloudinary.uploader.destroy(oldAvtarPublicId);
+            }
+            const uploadOptions = {
+                folder: "CHAT_APP_USER_AVTAR",
+                transformation: [
+                    { width: 300, height: 300, crop: "limit" },
+                    { quality: "auto" },
+                    { fetch_format: "auto" },
+                ],
             };
-
-            cloudinaryResponse = await cloudinary.uploader.upload(
-                avtar.tempFilePath, {
-                     folder: "CHAT_APP_USER_AVTAR",
-                     transformation: [
-                        {width:300, height: 300, crop: "limit"},
-                        {quality: "auto"},
-                        {fetch_format: "auto"},
-                     ],
-                }
-            );
+            if (avtar.tempFilePath) {
+                cloudinaryResponse = await cloudinary.uploader.upload(avtar.tempFilePath, uploadOptions);
+            } else {
+                cloudinaryResponse = await new Promise((resolve, reject) => {
+                    const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
+                        if (error) return reject(error);
+                        resolve(result);
+                    });
+                    stream.end(avtar.data);
+                });
+            }
         } catch (error) {
-            console.error("cloudinary upload failed", error);
+            console.error("Cloudinary upload failed:", error);
             return res.status(400).json({
                 success: false,
-                message: "profile updated failed. try again later.",
-                  error: error.message,
-            })
+                message: "Profile update failed due to image upload error. Try again later.",
+                error: error.message,
+            });
         }
     }
 
-    let data = { fullName, email};
-
-    if( avtar && cloudinaryResponse?.public_id && cloudinaryResponse?.secure_url){
+    let data = { fullName, email };
+    if (avtar && cloudinaryResponse?.public_id && cloudinaryResponse?.secure_url) {
         data.avtar = {
             public_id: cloudinaryResponse.public_id,
             url: cloudinaryResponse.secure_url,
-        }
+        };
     }
 
     let user = await User.findByIdAndUpdate(req.user._id, data, {
@@ -170,5 +178,4 @@ export const updateProfile = catchAsyncError(async(req, res, next) => {
         message: "Profile updated successfully",
         user
     });
-  
 });
