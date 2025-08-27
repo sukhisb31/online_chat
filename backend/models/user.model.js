@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    avtar :{
+    avtar:{
         public_id: String,
         url: String,
     },
