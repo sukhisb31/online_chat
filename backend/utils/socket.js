@@ -1,8 +1,8 @@
 import { Server } from "socket.io";
 
-let io;
 
 const userSocketMap = {};
+let io;
 
 export function initSocket (server){
     io = new Server(server, {
